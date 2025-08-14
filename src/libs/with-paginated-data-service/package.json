@@ -1,6 +1,11 @@
 {
   "name": "with-paginated-data-source",
-  "version": "19.0.0",
+  "version": "19.0.0",  "license": "MIT",
+  "description": "A feature for ngrx signal store based on NgRx Signals Store with-data-service",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/giovanni-venturelli/with-paginated-data-service/"
+  },
   "peerDependencies": {
     "@angular/common": "^19.2.0",
     "@angular/core": "^19.2.0"
