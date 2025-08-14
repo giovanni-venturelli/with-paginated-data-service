@@ -1,6 +1,6 @@
 export default {
   displayName: 'with-paginated-data-service',
-  preset: '../../jest.preset.js',
+  preset: '<rootDir>/../../../',
   setupFilesAfterEnv: ['<rootDir>/src/test-setup.ts'],
   coverageDirectory: '../../coverage/src/libs',
   transform: {

@@ -3,6 +3,7 @@ import {
   EmptyFeatureResult,
   patchState,
   SignalStoreFeature,
+  SignalStoreFeatureResult,
   signalStoreFeature,
   type,
   withComputed,
@@ -15,7 +16,6 @@ import {
   EntityId,
   EntityState,
   NamedEntityState,
-  removeEntity,
   setAllEntities,
   updateEntity,
 } from '@ngrx/signals/entities';
@@ -47,7 +47,7 @@ export interface PaginatedDataService<E extends Entity, F extends Filter> {
 
   updateAll(entity: E[]): Promise<E[]>;
 
-  delete(entity: E): Promise<void>;
+  delete(filter: F): Promise<void>;
 }
 
 export function capitalize(str: string): string {
@@ -159,13 +159,13 @@ export type NamedPaginatedDataServiceState<
 } & {
   [K in Collection as `selected${Capitalize<K>}Ids`]: Record<EntityId, boolean>;
 } & {
-  [K in Collection as `current${Capitalize<K>}`]: E;
+  [K in Collection as `current${Capitalize<K>}`]: E | undefined;
 };
 
 export type PaginatedDataServiceState<E extends Entity, F extends Filter> = {
   filter: F;
   selectedIds: Record<EntityId, boolean>;
-  current: E;
+  current: E | undefined;
 };
 
 export type PaginatedDataServiceComputed<E extends Entity> = {
@@ -219,11 +219,11 @@ export type NamedPaginatedDataServiceMethods<
     entity: E[]
   ) => Promise<void>;
 } & {
-  [K in Collection as `delete${Capitalize<K>}`]: (entity: E) => Promise<void>;
+  [K in Collection as `delete${Capitalize<K>}`]: (filter: F) => Promise<void>;
 } & {
   [K in Collection as `goTo${Capitalize<K>}Page`]: (page: number) => Promise<void>;
 } & {
-  [K in Collection as `set${Capitalize<K>}PageSize`]: (pageSize: number) => Promise<void>;
+  [K in Collection as `set${Capitalize<K>}PageSize`]: (pageSize: number) => void;
 };
 
 export type PaginatedDataServiceMethods<E extends Entity, F extends Filter> = {
@@ -236,9 +236,9 @@ export type PaginatedDataServiceMethods<E extends Entity, F extends Filter> = {
   create(entity: E): Promise<void>;
   update(entity: E): Promise<void>;
   updateAll(entities: E[]): Promise<void>;
-  delete(entity: E): Promise<void>;
+  delete(filter: F): Promise<void>;
   goToPage(page: number): Promise<void>;
-  setPageSize(pageSize: number): Promise<void>;
+  setPageSize(pageSize: number): void;
 };
 
 export function withPaginatedDataService<
@@ -249,10 +249,9 @@ export function withPaginatedDataService<
   dataServiceType: ProviderToken<PaginatedDataService<E, F>>;
   filter: F;
   collection: Collection;
+  pageSize?: number;
 }): SignalStoreFeature<
-  EmptyFeatureResult & {
-  state: NamedCallStateSlice<Collection> & NamedEntityState<E, Collection>;
-},
+  SignalStoreFeatureResult,
   {
     state: NamedPaginatedDataServiceState<E, F, Collection>;
     props: NamedPaginatedDataServiceComputed<E, Collection>;
@@ -265,8 +264,25 @@ export function withPaginatedDataService<
 >(options: {
   dataServiceType: ProviderToken<PaginatedDataService<E, F>>;
   filter: F;
+  collection: string;
+  pageSize?: number;
 }): SignalStoreFeature<
-  EmptyFeatureResult & { state: { callState: CallState } & EntityState<E> },
+  SignalStoreFeatureResult,
+  {
+    state: NamedPaginatedDataServiceState<E, F, string>;
+    props: NamedPaginatedDataServiceComputed<E, string>;
+    methods: NamedPaginatedDataServiceMethods<E, F, string>;
+  }
+>;
+export function withPaginatedDataService<
+  E extends Entity,
+  F extends Filter
+>(options: {
+  dataServiceType: ProviderToken<PaginatedDataService<E, F>>;
+  filter: F;
+  pageSize?: number;
+}): SignalStoreFeature<
+  SignalStoreFeatureResult,
   {
     state: PaginatedDataServiceState<E, F>;
     props: PaginatedDataServiceComputed<E>;
@@ -309,25 +325,41 @@ export function withPaginatedDataService<
     setPageSizeKey,
   } = getDataServiceKeys(options);
   const { callStateKey } = getCallStateKeys({ collection: prefix });
+  // Use distinct internal state keys for prefixed pagination values to avoid overriding computed members
+  const currentPageStateKey = prefix ? `_${currentPageKey}` : currentPageKey;
+  const pageSizeStateKey = prefix ? `_${pageSizeKey}` : pageSizeKey;
+  const totalCountStateKey = prefix ? `_${totalCountKey}` : totalCountKey;
+  const pageCountStateKey = prefix ? `_${pageCountKey}` : pageCountKey;
+
   return signalStoreFeature(
     withState({
       [filterKey]: filter,
       [selectedIdsKey]: {} as Record<EntityId, boolean>,
       [currentKey]: undefined as E | undefined,
-      [currentPageKey]: 1,
-      [pageSizeKey]: options.pageSize ?? 15,
-      [totalCountKey]: 0,
-      [pageCountKey]: 0
+      [currentPageStateKey]: 1,
+      [pageSizeStateKey]: options.pageSize ?? 15,
+      [totalCountStateKey]: 0,
+      [pageCountStateKey]: 0
     }),
     withComputed((store: Record<string, unknown>) => {
       const entities = store[entitiesKey] as Signal<E[]>;
       const selectedIds = store[selectedIdsKey] as Signal<
         Record<EntityId, boolean>
       >;
+      // Create capitalized/named computed keys to expose pagination values in DevTools without colliding with state keys
+      const currentPageComputedKey = prefix ? `${prefix}CurrentPage` : 'CurrentPage';
+      const totalCountComputedKey = prefix ? `${prefix}TotalCount` : 'TotalCount';
+      const pageSizeComputedKey = prefix ? `${prefix}PageSize` : 'PageSize';
+      const pageCountComputedKey = prefix ? `${prefix}PageCount` : 'PageCount';
+
       return {
         [selectedEntitiesKey]: computed(() =>
           entities().filter((e) => selectedIds()[e.id])
         ),
+        [currentPageComputedKey]: computed(() => (store[currentPageStateKey] as Signal<number>)()),
+        [totalCountComputedKey]: computed(() => (store[totalCountStateKey] as Signal<number>)()),
+        [pageSizeComputedKey]: computed(() => (store[pageSizeStateKey] as Signal<number>)()),
+        [pageCountComputedKey]: computed(() => (store[pageCountStateKey] as Signal<number>)()),
       };
     }),
     withMethods(
@@ -335,8 +367,8 @@ export function withPaginatedDataService<
         const dataService = inject(dataServiceType);
         const doLoad = async (): Promise<void> => {
           const filter = store[filterKey] as Signal<F>;
-          const currentPage = store[currentPageKey] as Signal<number>;
-          const pageSize = store[pageSizeKey] as Signal<number>;
+          const currentPage = store[currentPageStateKey] as Signal<number>;
+          const pageSize = store[pageSizeStateKey] as Signal<number>;
           (() =>
             store[callStateKey] && patchState(store, setLoading(prefix)))();
           try {
@@ -347,8 +379,8 @@ export function withPaginatedDataService<
             patchState(
               store,
               {
-                [totalCountKey]: result.totalCount,
-                [pageCountKey]: result.pageCount,
+                [totalCountStateKey]: result.totalCount,
+                [pageCountStateKey]: result.pageCount,
               },
               prefix
                 ? setAllEntities(result.data, { collection: prefix })
@@ -376,8 +408,8 @@ export function withPaginatedDataService<
           },
           [loadKey]: async (): Promise<void> => {
             const filter = store[filterKey] as Signal<F>;
-            const currentPage = store[currentPageKey] as Signal<number>;
-            const pageSize = store[pageSizeKey] as Signal<number>;
+            const currentPage = store[currentPageStateKey] as Signal<number>;
+            const pageSize = store[pageSizeStateKey] as Signal<number>;
             (() =>
               store[callStateKey] && patchState(store, setLoading(prefix)))();
             try {
@@ -388,8 +420,8 @@ export function withPaginatedDataService<
               patchState(
                 store,
                 {
-                  [totalCountKey]: result.totalCount,
-                  [pageCountKey]: result.pageCount,
+                  [totalCountStateKey]: result.totalCount,
+                  [pageCountStateKey]: result.pageCount,
                 },
                 prefix
                   ? setAllEntities(result.data, { collection: prefix })
@@ -405,11 +437,11 @@ export function withPaginatedDataService<
             }
           },
           [goToPageKey]: async (page: number): Promise<void> => {
-            patchState(store, { [currentPageKey]: page });
+            patchState(store, { [currentPageStateKey]: page });
             return await doLoad();
           },
           [setPageSizeKey]: (pageSize: number): void => {
-            patchState(store, { [pageSizeKey]: pageSize });
+            patchState(store, { [pageSizeStateKey]: pageSize });
           },
           [loadByIdKey]: async (id: EntityId): Promise<void> => {
             (() =>
@@ -504,20 +536,16 @@ export function withPaginatedDataService<
               throw e;
             }
           },
-          [deleteKey]: async (entity: E): Promise<void> => {
-            patchState(store, { [currentKey]: entity });
+          [deleteKey]: async (filter: F): Promise<void> => {
+            // Clear current and perform deletion by filter, then reload to reflect changes
+            patchState(store, { [currentKey]: undefined });
             (() =>
               store[callStateKey] && patchState(store, setLoading(prefix)))();
 
             try {
-              await dataService.delete(entity);
-              patchState(store, { [currentKey]: undefined });
-              patchState(
-                store,
-                prefix
-                  ? removeEntity(entity.id, { collection: prefix })
-                  : removeEntity(entity.id)
-              );
+              await dataService.delete(filter);
+              // After deleting by filter (potentially multiple entities), reload current page
+              await doLoad();
               (() =>
                 store[callStateKey] && patchState(store, setLoaded(prefix)))();
             } catch (e) {

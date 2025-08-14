@@ -1,4 +1,41 @@
-{{pageCount()}}
-{{pageSize()}}
-{{currentPage()}}
-{{totalCount()}}
+<h1>Todos (paginated)</h1>
+
+<div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+  <div>
+    <button (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
+    <span style="margin: 0 0.5rem;">
+      Page {{ currentPage() }} / {{ pageCount() || 1 }}
+    </span>
+    <button (click)="nextPage()" [disabled]="currentPage() >= (pageCount() || 1)">Next</button>
+  </div>
+
+  <div>
+    <label>
+      Page size:
+      <select [value]="pageSize()" (change)="changePageSize(Number($any($event.target).value))">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="15">15</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select>
+    </label>
+  </div>
+
+  <div>Total items: {{ totalCount() }}</div>
+</div>
+
+<div>
+  @if ((totalCount() ?? 0) === 0) {
+    <p>No todos.</p>
+  } @else {
+    <ul>
+      @for (t of todos(); track t.id) {
+        <li>
+          <span>{{ t.id }}.</span>
+          <span> {{ t.description }} </span>
+        </li>
+      }
+    </ul>
+  }
+</div>

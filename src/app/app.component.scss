@@ -1,0 +1,115 @@
+// App component scoped styles
+:host {
+  display: block;
+  padding: 1.25rem;
+  background: linear-gradient(180deg, #f7f9fc 0%, #ffffff 100%);
+  min-height: 100vh;
+  color: #1f2937; // slate-800
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+h1 {
+  margin: 0 0 1rem 0;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #0ea5e9, #6366f1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+// Top controls (paginator + page size + count)
+:host > div:first-of-type {
+  backdrop-filter: blur(4px);
+}
+
+button {
+  appearance: none;
+  border: 1px solid #d1d5db; // gray-300
+  background-color: #ffffff;
+  color: #111827; // gray-900
+  padding: 0.4rem 0.8rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 120ms ease-in-out;
+}
+
+button:hover:not(:disabled) {
+  border-color: #93c5fd; // blue-300
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 1px rgba(0,0,0,0.04);
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+select {
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  outline: none;
+}
+
+select:focus {
+  border-color: #60a5fa; // blue-400
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb; // gray-200
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+li:hover {
+  transform: translateY(-2px);
+  border-color: #c7d2fe; // indigo-200
+  box-shadow: 0 6px 12px rgba(99,102,241,0.08);
+}
+
+li span:first-child {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-weight: 700;
+  color: #4338ca; // indigo-700
+  background: #eef2ff; // indigo-50
+  border: 1px solid #e0e7ff; // indigo-100
+}
+
+li span:last-child {
+  flex: 1;
+  color: #374151; // gray-700
+}
+
+// Empty state
+p {
+  margin: 0;
+  padding: 1rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 0.75rem;
+  color: #6b7280; // gray-500
+  background: #f9fafb; // gray-50
+}
