@@ -326,10 +326,10 @@ export function withPaginatedDataService<
   } = getDataServiceKeys(options);
   const { callStateKey } = getCallStateKeys({ collection: prefix });
   // Use distinct internal state keys for prefixed pagination values to avoid overriding computed members
-  const currentPageStateKey = prefix ? `_${currentPageKey}` : currentPageKey;
-  const pageSizeStateKey = prefix ? `_${pageSizeKey}` : pageSizeKey;
-  const totalCountStateKey = prefix ? `_${totalCountKey}` : totalCountKey;
-  const pageCountStateKey = prefix ? `_${pageCountKey}` : pageCountKey;
+  const currentPageStateKey = prefix ? `${currentPageKey}` : currentPageKey;
+  const pageSizeStateKey = prefix ? `${pageSizeKey}` : pageSizeKey;
+  const totalCountStateKey = prefix ? `${totalCountKey}` : totalCountKey;
+  const pageCountStateKey = prefix ? `${pageCountKey}` : pageCountKey;
 
   return signalStoreFeature(
     withState({
