@@ -1,7 +1,7 @@
 {
   "name": "with-paginated-data-service",
   "$schema": "../../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "src/libs/src",
+  "sourceRoot": "src/libs/with-paginated-data-service/src",
   "prefix": "lib",
   "projectType": "library",
   "release": {
@@ -19,14 +19,14 @@
       "executor": "@nx/angular:package",
       "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
       "options": {
-        "project": "src/libs/ng-package.json"
+        "project": "src/libs/with-paginated-data-service/ng-package.json"
       },
       "configurations": {
         "production": {
-          "tsConfig": "src/libs/tsconfig.lib.prod.json"
+          "tsConfig": "src/libs/with-paginated-data-service/tsconfig.lib.prod.json"
         },
         "development": {
-          "tsConfig": "src/libs/tsconfig.lib.json"
+          "tsConfig": "src/libs/with-paginated-data-service/tsconfig.lib.json"
         }
       },
       "defaultConfiguration": "production"
@@ -40,7 +40,7 @@
       "executor": "@nx/jest:jest",
       "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
       "options": {
-        "jestConfig": "src/libs/jest.config.ts"
+        "jestConfig": "src/libs/with-paginated-data-service/jest.config.ts"
       }
     },
     "lint": {
