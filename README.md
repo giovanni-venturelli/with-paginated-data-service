@@ -1,101 +1,260 @@
-# WithPaginatedDataServiceWorkspace
+# With Paginated Data Service #
+This is an extension feature to the NgRx Signals Store.
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+It is heavily based on the with-data-service feature and provides the possibility to receive the pagination data from
+the server.
+Here an example of how to use it:
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+install:
+```
+npm install with-paginated-data-service
+```
+store:
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/angular-standalone-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+```typescript
+import { signalStore, type, withState } from '@ngrx/signals';
+import {
+  withCallState,
+  withDevtools,
+} from '@angular-architects/ngrx-toolkit';
+import { withEntities } from '@ngrx/signals/entities';
+import { withPaginatedDataService } from 'with-paginated-data-service';
+import { ToDo, TodoService } from './paginated-to-do.service';
 
-## Run tasks
-
-To run the dev server for your app, use:
-
-```sh
-npx nx serve with-paginated-data-service-workspace
+export const ToDoStore = signalStore(
+  { providedIn: 'root' },
+  withDevtools('TODOSTORE'),
+  withEntities({ entity: type<ToDo>(), collection: 'todos' }),
+  withCallState({ collection: 'todos' }),
+  withPaginatedDataService({
+    collection: 'todos',
+    filter: { ids: [] as number[] },
+    dataServiceType: TodoService,
+  }),
+);
 ```
 
-To create a production bundle:
+service:
 
-```sh
-npx nx build with-paginated-data-service-workspace
+```typescript
+import { Injectable } from '@angular/core';
+import { PaginatedDataService } from 'with-paginated-data-service';
+import { Filter } from '@angular-architects/ngrx-toolkit';
+import { EntityId } from '@ngrx/signals/entities';
+
+export interface ToDo {
+  id: number;
+  description: string;
+}
+
+export interface TodoFilter extends Filter {
+  ids: number[];
+}
+
+@Injectable({
+  providedIn: 'root',
+})
+export class TodoService implements PaginatedDataService<ToDo, TodoFilter> {
+  // In-memory mock database
+  private todos: ToDo[] = Array.from({ length: 100 }, (_, i) => ({
+    id: i + 1,
+    description: `Todo #${i + 1}`,
+  }));
+
+  private nextId = this.todos.length + 1;
+
+  async load(
+    filter: TodoFilter,
+    pagination: { page: number; pageSize: number }
+  ): Promise<{ data: ToDo[]; totalCount: number; pageCount: number }> {
+    // Apply filtering by ids if provided; otherwise return all
+    const ids = (filter?.ids ?? []).filter((x) => typeof x === 'number');
+    const filtered = ids.length > 0
+      ? this.todos.filter((t) => ids.includes(t.id))
+      : this.todos.slice();
+
+    // Pagination
+    const totalCount = filtered.length;
+    const pageSize = Math.max(1, Math.floor(pagination?.pageSize ?? 15));
+    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+    const page = Math.min(Math.max(1, Math.floor(pagination?.page ?? 1)), pageCount);
+
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    const data = filtered.slice(start, end);
+
+    return Promise.resolve({ data, totalCount, pageCount });
+  }
+
+  async loadById(id: EntityId): Promise<ToDo> {
+    const numId = Number(id);
+    const found = this.todos.find((t) => t.id === numId);
+    if (!found) {
+      return Promise.reject(new Error(`ToDo with id ${id} not found`));
+    }
+    return Promise.resolve({ ...found });
+  }
+
+  async create(entity: ToDo): Promise<ToDo> {
+    const id = entity?.id && !this.todos.some((t) => t.id === entity.id)
+      ? Number(entity.id)
+      : this.nextId++;
+    const created: ToDo = { id, description: entity?.description ?? '' };
+    this.todos.push(created);
+    return Promise.resolve({ ...created });
+  }
+
+  async update(entity: ToDo): Promise<ToDo> {
+    const idx = this.todos.findIndex((t) => t.id === entity.id);
+    if (idx === -1) {
+      return Promise.reject(new Error(`Cannot update. ToDo with id ${entity.id} not found`));
+    }
+    const updated: ToDo = { ...this.todos[idx], ...entity };
+    this.todos[idx] = updated;
+    return Promise.resolve({ ...updated });
+  }
+
+  async updateAll(entities: ToDo[]): Promise<ToDo[]> {
+    const results: ToDo[] = [];
+    for (const e of entities ?? []) {
+      const idx = this.todos.findIndex((t) => t.id === e.id);
+      if (idx === -1) {
+        // Upsert behavior: add if not existing
+        const id = e?.id && !this.todos.some((t) => t.id === e.id)
+          ? Number(e.id)
+          : this.nextId++;
+        const created: ToDo = { id, description: e?.description ?? '' };
+        this.todos.push(created);
+        results.push({ ...created });
+      } else {
+        const updated: ToDo = { ...this.todos[idx], ...e };
+        this.todos[idx] = updated;
+        results.push({ ...updated });
+      }
+    }
+    return Promise.resolve(results);
+  }
+
+  async delete(filter: TodoFilter): Promise<void> {
+    const ids = (filter?.ids ?? []).filter((x) => typeof x === 'number');
+    if (ids.length === 0) {
+      // Nothing to delete if no ids provided; resolve without error
+      return Promise.resolve();
+    }
+    const before = this.todos.length;
+    const idsSet = new Set(ids);
+    this.todos = this.todos.filter((t) => !idsSet.has(t.id));
+    // Resolve regardless of whether any item was removed to keep idempotency
+    return Promise.resolve();
+  }
+}
+
 ```
 
-To see all available targets to run for a project, run:
+component:
 
-```sh
-npx nx show project with-paginated-data-service-workspace
+```typescript
+import { Component, computed, inject } from '@angular/core';
+import { ToDoStore } from './todo.store';
+
+@Component({
+  selector: 'app-root',
+  template: `<h1>Todos (paginated)</h1>
+
+<div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem;">
+  <div>
+    <button (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
+    <span style="margin: 0 0.5rem;">
+      Page {{ currentPage() }} / {{ pageCount() || 1 }}
+    </span>
+    <button (click)="nextPage()" [disabled]="currentPage() >= (pageCount() || 1)">Next</button>
+  </div>
+
+  <div>
+    <label>
+      Page size:
+      <select [value]="pageSize()" (change)="changePageSize(Number($any($event.target).value))">
+        <option value="5">5</option>
+        <option value="10">10</option>
+        <option value="15">15</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select>
+    </label>
+  </div>
+
+  <div>Total items: {{ totalCount() }}</div>
+</div>
+
+<div>
+  @if ((totalCount() ?? 0) === 0) {
+    <p>No todos.</p>
+  } @else {
+    <ul>
+      @for (t of todos(); track t.id) {
+        <li>
+          <span>{{ t.id }}.</span>
+          <span> {{ t.description }} </span>
+        </li>
+      }
+    </ul>
+  }
+</div>`,
+  styleUrl: './app.component.scss'
+})
+export class AppComponent {
+  title = 'with-paginated-data-service-workspace';
+  private store: InstanceType<typeof ToDoStore> = inject(ToDoStore);
+
+  // Expose pagination signals from the store
+  protected totalCount = computed(() => this.store.todosTotalCount());
+  protected pageCount = computed(() => this.store.todosPageCount());
+  protected pageSize = computed(() => this.store.todosPageSize());
+  protected currentPage = computed(() => this.store.todosCurrentPage());
+
+  protected todos = computed(() => this.store.todosEntities());
+
+  constructor() {
+    // Load first page
+    this.store.loadTodosEntities();
+  }
+
+  // Paginator actions
+  protected goToPage(page: number): void {
+    const clamped = Math.max(1, Math.min(page, this.pageCount() || 1));
+    this.store.goToTodosPage(clamped);
+  }
+
+  protected nextPage(): void {
+    if (this.currentPage() < (this.pageCount() || 1)) {
+      this.store.goToTodosPage(this.currentPage() + 1);
+    }
+  }
+
+  protected prevPage(): void {
+    if (this.currentPage() > 1) {
+      this.store.goToTodosPage(this.currentPage() - 1);
+    }
+  }
+
+  protected changePageSize(size: number): void {
+    const s = Math.max(1, Math.floor(size || 1));
+    this.store.setTodosPageSize(s);
+    this.store.goToTodosPage(1);
+  }
+
+  protected readonly Number = Number;
+}
+
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
+NgRx Toolkit is a set of extensions to the NgRx Signals Store, like
 
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+- Devtools: Integration into Redux Devtools
+- Redux: Possibility to use the Redux Pattern (Reducer, Actions, Effects)
+- Storage Sync: Synchronize the Store with Web Storage
+- Redux Connector: Map NgRx Store Actions to a present Signal Store
 
-## Add new projects
+For a more detailed guide on installation, setup, and usage, of NgRx Toolkit head to the [**Documentation
+**](https://ngrx-toolkit.angulararchitects.io//).
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
-
-Use the plugin's generator to create new projects.
-
-To generate a new application, use:
-
-```sh
-npx nx g @nx/angular:app demo
-```
-
-To generate a new library, use:
-
-```sh
-npx nx g @nx/angular:lib mylib
-```
-
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/angular-standalone-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
