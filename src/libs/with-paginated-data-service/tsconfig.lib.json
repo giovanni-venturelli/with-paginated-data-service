@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "declaration": true,
+    "declarationMap": true,
+    "inlineSources": true,
+    "types": []
+  },
+  "exclude": [
+    "with-paginated-data-service/src/**/*.spec.ts",
+    "src/test-setup.ts",
+    "with-paginated-data-service/jest.config.ts",
+    "with-paginated-data-service/src/**/*.test.ts"
+  ],
+  "include": [
+    "with-paginated-data-service/src/**/*.ts"
+  ]
+}
