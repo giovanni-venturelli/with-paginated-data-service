@@ -207,10 +207,10 @@ export class AppComponent {
   private store: InstanceType<typeof ToDoStore> = inject(ToDoStore);
 
   // Expose pagination signals from the store
-  protected totalCount = computed(() => this.store.todosTotalCount());
-  protected pageCount = computed(() => this.store.todosPageCount());
-  protected pageSize = computed(() => this.store.todosPageSize());
-  protected currentPage = computed(() => this.store.todosCurrentPage());
+  protected totalCount = computed(() => this.store.todosTotalDataCount());
+  protected pageCount = computed(() => this.store.todosDataPageCount());
+  protected pageSize = computed(() => this.store.todosDataPageSize());
+  protected currentPage = computed(() => this.store.todosCurrentDataPage());
 
   protected todos = computed(() => this.store.todosEntities());
 
