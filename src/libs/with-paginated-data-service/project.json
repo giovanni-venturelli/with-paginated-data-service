@@ -7,7 +7,7 @@
   "release": {
     "version": {
       "generatorOptions": {
-        "packageRoot": "dist/{projectRoot}",
+        "packageRoot": "dist/with-paginated-data-service",
         "currentVersionResolver": "git-tag",
         "fallbackCurrentVersionResolver": "disk"
       }
@@ -17,7 +17,7 @@
   "targets": {
     "build": {
       "executor": "@nx/angular:package",
-      "outputs": ["{workspaceRoot}/dist/{projectRoot}"],
+      "outputs": ["{workspaceRoot}/dist/with-paginated-data-service"],
       "options": {
         "project": "src/libs/with-paginated-data-service/ng-package.json"
       },
@@ -33,7 +33,7 @@
     },
     "nx-release-publish": {
       "options": {
-        "packageRoot": "dist/{projectRoot}"
+        "packageRoot": "dist/with-paginated-data-service"
       }
     },
     "test": {

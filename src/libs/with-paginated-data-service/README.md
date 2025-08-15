@@ -1,7 +1,7 @@
-# With Paginated Data Service #
+# with-paginated-data-service #
 This is an extension feature to the NgRx Signals Store.
 
-It is heavily based on the with-data-service feature and provides the possibility to receive the pagination data from
+It is heavily based on the with-data-service feature from @angular-architects/ngrx-toolkit and provides the possibility to receive the pagination data from
 the server.
 Here an example of how to use it:
 
