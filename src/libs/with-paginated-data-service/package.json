@@ -1,6 +1,6 @@
 {
   "name": "with-paginated-data-service",
-  "version": "19.0.2",
+  "version": "19.0.3",
   "license": "MIT",
   "description": "A feature for ngrx signal store based on NgRx Signals Store with-data-service",
   "repository": {

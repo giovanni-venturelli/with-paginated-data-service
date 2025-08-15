@@ -60,19 +60,19 @@ export function getDataServiceKeys(options: { collection?: string }) {
     : `goToPage`;
   const setPageSizeKey = options.collection
     ? `set${capitalize(options.collection)}PageSize`
-    : `setPageSize`;
+    : `setDataPageSize`;
   const pageCountKey = options.collection
-    ? `${options.collection}PageCount`
-    : `pageCount`;
+    ? `${options.collection}DataPageCount`
+    : `dataPageCount`;
   const totalCountKey = options.collection
-    ? `${options.collection}TotalCount`
-    : `totalCount`;
+    ? `${options.collection}TotalDataCount`
+    : `totalDataCount`;
   const currentPageKey = options.collection
-    ? `${options.collection}CurrentPage`
-    : `currentPage`;
+    ? `${options.collection}CurrentDataPage`
+    : `currentDataPage`;
   const pageSizeKey = options.collection
-    ? `${options.collection}PageSize`
-    : `pageSize`;
+    ? `${options.collection}DataPageSize`
+    : `dataPageSize`;
   const filterKey = options.collection
     ? `${options.collection}Filter`
     : 'filter';
