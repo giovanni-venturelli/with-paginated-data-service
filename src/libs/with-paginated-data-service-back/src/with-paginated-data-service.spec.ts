@@ -5,7 +5,7 @@ import { withEntities } from '@ngrx/signals/entities';
 import {
   withPaginatedDataService,
   PaginatedDataService,
-} from './withPaginatedDataService';
+} from './with-paginated-data-service';
 import { Filter, withCallState } from '@angular-architects/ngrx-toolkit';
 
 interface Item { id: number; name: string }
