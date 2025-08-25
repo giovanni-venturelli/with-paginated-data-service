@@ -61,14 +61,17 @@ export function getDataServiceKeys(options: { collection?: string }) {
   const setPageSizeKey = options.collection
     ? `set${capitalize(options.collection)}PageSize`
     : `setDataPageSize`;
+  const setCurrentPageKey = options.collection
+    ? `setCurrent${capitalize(options.collection)}Page`
+    : `setCurrentPage`;
   const pageCountKey = options.collection
     ? `${options.collection}DataPageCount`
     : `dataPageCount`;
   const totalCountKey = options.collection
-    ? `${options.collection}TotalDataCount`
+    ? `total${capitalize(options.collection)}DataCount`
     : `totalDataCount`;
   const currentPageKey = options.collection
-    ? `${options.collection}CurrentDataPage`
+    ? `current${capitalize(options.collection)}DataPage`
     : `currentDataPage`;
   const pageSizeKey = options.collection
     ? `${options.collection}DataPageSize`
@@ -147,6 +150,7 @@ export function getDataServiceKeys(options: { collection?: string }) {
     deleteKey,
     goToPageKey,
     setPageSizeKey,
+    setCurrentPageKey
   };
 }
 
@@ -182,9 +186,9 @@ export type NamedPaginatedDataServiceComputed<
 > = {
   [K in Collection as `selected${Capitalize<K>}Entities`]: Signal<E[]>;
 } &  {
-  [K in Collection as  `${K}CurrentPage`]: Signal<number>;
+  [K in Collection as  `current${Capitalize<K>}Page`]: Signal<number>;
 } &  {
-  [K in Collection as  `${K}TotalCount`]: Signal<number>;
+  [K in Collection as  `total${Capitalize<K>}Count`]: Signal<number>;
 } &  {
   [K in Collection as  `${K}PageSize`]: Signal<number>;
 } &  {
@@ -323,6 +327,7 @@ export function withPaginatedDataService<
     setCurrentKey,
     goToPageKey,
     setPageSizeKey,
+    setCurrentPageKey,
   } = getDataServiceKeys(options);
   const { callStateKey } = getCallStateKeys({ collection: prefix });
   // Use distinct internal state keys for prefixed pagination values to avoid overriding computed members
@@ -442,6 +447,9 @@ export function withPaginatedDataService<
           },
           [setPageSizeKey]: (pageSize: number): void => {
             patchState(store, { [pageSizeStateKey]: pageSize });
+          },
+          [setCurrentPageKey]: (pageNumber: number): void => {
+            patchState(store, { [currentPageKey]: pageNumber });
           },
           [loadByIdKey]: async (id: EntityId): Promise<void> => {
             (() =>

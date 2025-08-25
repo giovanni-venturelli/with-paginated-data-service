@@ -1,8 +1,5 @@
-import {  signalStore, type, withState } from '@ngrx/signals';
-import {
-  withCallState,
-  withDevtools,
-} from '@angular-architects/ngrx-toolkit';
+import { signalStore, type } from '@ngrx/signals';
+import { withCallState, withDevtools } from '@angular-architects/ngrx-toolkit';
 import { withEntities } from '@ngrx/signals/entities';
 import { withPaginatedDataService } from 'with-paginated-data-service';
 import { ToDo, TodoService } from './paginated-to-do.service';

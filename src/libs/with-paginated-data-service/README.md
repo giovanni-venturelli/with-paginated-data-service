@@ -202,16 +202,18 @@ import { ToDoStore } from './todo.store';
 </div>`,
   styleUrl: './app.component.scss'
 })
+
 export class AppComponent {
   title = 'with-paginated-data-service-workspace';
   private store: InstanceType<typeof ToDoStore> = inject(ToDoStore);
 
   // Expose pagination signals from the store
-  protected totalCount = computed(() => this.store.todosTotalDataCount());
-  protected pageCount = computed(() => this.store.todosDataPageCount());
-  protected pageSize = computed(() => this.store.todosDataPageSize());
-  protected currentPage = computed(() => this.store.todosCurrentDataPage());
+  protected totalCount = computed(() => this.store.totalTodosCount());
+  protected pageCount = computed(() => this.store.todosPageCount());
+  protected pageSize = computed(() => this.store.todosPageSize());
+  protected currentPage = computed(() => this.store.currentTodosPage());
 
+  // Current page items (already paginated by the store)
   protected todos = computed(() => this.store.todosEntities());
 
   constructor() {
@@ -240,6 +242,7 @@ export class AppComponent {
   protected changePageSize(size: number): void {
     const s = Math.max(1, Math.floor(size || 1));
     this.store.setTodosPageSize(s);
+    // Reset to first page and reload (goToPage triggers load)
     this.store.goToTodosPage(1);
   }
 
