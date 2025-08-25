@@ -352,8 +352,8 @@ export function withPaginatedDataService<
         Record<EntityId, boolean>
       >;
       // Create capitalized/named computed keys to expose pagination values in DevTools without colliding with state keys
-      const currentPageComputedKey = prefix ? `${prefix}CurrentPage` : 'CurrentPage';
-      const totalCountComputedKey = prefix ? `${prefix}TotalCount` : 'TotalCount';
+      const currentPageComputedKey = prefix ? `current${capitalize(prefix)}Page` : 'CurrentPage';
+      const totalCountComputedKey = prefix ? `total${capitalize(prefix)}Count` : 'TotalCount';
       const pageSizeComputedKey = prefix ? `${prefix}PageSize` : 'PageSize';
       const pageCountComputedKey = prefix ? `${prefix}PageCount` : 'PageCount';
 
